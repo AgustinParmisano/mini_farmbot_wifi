@@ -1,7 +1,7 @@
 #include <DHT.h>
+#include <Wire.h>
 
-
-int pinLDR = 5;
+int pinLDR = 1;
 int pinOUTrelay = 8;
 int pinDHL69 = 0;
 int pinDHT11 = 7;
@@ -12,7 +12,14 @@ float h = 0;
 float t =  0;
 float hic = 0;
 
+String data_packet = "nada";
+
+
 #define DHTTYPE DHT22 
+#define SLAVE_ADDRESS 0x04
+
+int number = 0;
+int state = 0;
 
 DHT dht(pinDHT11, DHTTYPE);
 
@@ -24,6 +31,10 @@ void setup() {
   pinMode(pinDHT11, INPUT);
 
   dht.begin();
+  Wire.begin(SLAVE_ADDRESS);
+  
+  Wire.onReceive(receiveData);
+  Wire.onRequest(sendData);
 }
 
 void read_moist() {
@@ -74,6 +85,36 @@ void read_temp_hume() {
 
 }
 
+// callback for received data
+void receiveData(int byteCount){
+  Serial.println("I2C RECEIVE");
+
+  while(Wire.available()) {
+    number = Wire.read();
+    Serial.println("Data received: ");
+    Serial.println(number);
+    
+    if (number == 1) {
+      if (state == 0) {
+        digitalWrite(13, HIGH); // set the LED on
+        state = 1;
+      }
+      else {
+        digitalWrite(13, LOW); // set the LED off
+        state = 0;
+      }
+    }
+  }
+}
+
+// callback for sending data
+void sendData(){
+  Serial.println("I2C SEND");
+  int data = valorDHL;
+  Serial.println(data);
+  Wire.write(data);
+}
+
 void loop() {
   delay(2000);
   
@@ -85,5 +126,7 @@ void loop() {
   read_temp_hume();
 
   read_moist();
-  
+
+  data_packet = "{'ldr':'" + String(valorLDR) + "','temp':'" + String(t) + "','hume':'" + String(h) + "','moist':'" + String(valorDHL) + "'}";
+  data_packet = "test";
 }
